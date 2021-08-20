@@ -28,6 +28,21 @@ func BenchmarkFBATemporaryData(b *testing.B) {
 	}
 }
 
+func BenchmarkArenaTemporaryData(b *testing.B) {
+	alloc, err := CreateFixedBlockAllocator(&DefaultAllocator{}, 4096, 64, 8)
+	if err != nil {
+		b.FailNow()
+	}
+	defer alloc.Destroy()
+
+	for i := 0; i < b.N/2; i++ {
+		arena := CreateArenaAllocator(alloc)
+		_ = arena.Malloc(64)
+		_ = arena.Malloc(64)
+		arena.FreeAll()
+	}
+}
+
 func BenchmarkDefaultGrowShrink(b *testing.B) {
 	alloc := &DefaultAllocator{}
 	defer alloc.Destroy()

@@ -14,7 +14,7 @@ Also available:
 
 * `DefaultAllocator` - calls cgo for Malloc and Free
 * `ThresholdAllocator` - If the malloc size is <= a provided value, use one allocator.  Otherwise, use the other.  Allocations made above the threshold size are stored in a map to enable `Free`. You can use this with a `FixedBlockAllocator` to use the default allocator for large requests.  You could also use several to set up a multi-tiered FBA, I suppose. 
-* `ArenaAllocator` - sits on top of another allocator.  Exposes a FreeAll method which will free all memory allocated through the ArenaAllocator.
+* `ArenaAllocator` - sits on top of another allocator.  Exposes a FreeAll method which will free all memory allocated through the ArenaAllocator.  ArenaAllocator is optimized for `FreeAll` and ordinary frees have a cost of O(N)
 
 ### Are these thread-safe?
 
@@ -24,15 +24,26 @@ The DefaultAllocator is! And as slow as cgo is, it's still far faster than any l
 
 In terms of memory overhead, it's kind of bad! I use a lot of maps and slices to track allocated-but-not-freed data.  In terms of speed:
 
+Default cgo
 ```
 BenchmarkDefaultTemporaryData
-BenchmarkDefaultTemporaryData-16    	12688918	        96.51 ns/op
-BenchmarkFBATemporaryData
-BenchmarkFBATemporaryData-16        	100000000	        11.07 ns/op
+BenchmarkDefaultTemporaryData-16    	12792590	        94.58 ns/op
 BenchmarkDefaultGrowShrink
-BenchmarkDefaultGrowShrink-16       	11640133	       105.1 ns/op
+BenchmarkDefaultGrowShrink-16       	11286946	       104.7 ns/op
+```
+
+Fixed Buffer
+```
+BenchmarkFBATemporaryData
+BenchmarkFBATemporaryData-16        	123561244	         9.714 ns/op
 BenchmarkFBAGrowShrink
-BenchmarkFBAGrowShrink-16           	61445820	        34.88 ns/op
+BenchmarkFBAGrowShrink-16           	64682006	        34.83 ns/op
+```
+
+Arena
+```
+BenchmarkArenaTemporaryData
+BenchmarkArenaTemporaryData-16      	40963460	        29.24 ns/op
 ```
 
 "It's fine!"
