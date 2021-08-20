@@ -5,21 +5,17 @@ package cgoalloc
 */
 import "C"
 import (
+	"container/heap"
 	"errors"
 	"sort"
 	"unsafe"
 )
 
-type Page struct {
-	pageStart uintptr
-	freeBlocks []unsafe.Pointer
-}
-
 type FixedBlockAllocator struct {
 	inner Allocator
 
+	nextPageTicket uint
 	allFreeBlocks int
-	nextOpenPage int
 
 	pageSize uintptr
 	blockSize uintptr
@@ -28,6 +24,7 @@ type FixedBlockAllocator struct {
 
 	pageStarts []uintptr
 	pages map[uintptr]*Page
+	freeBlockQueue PagePQueue
 }
 
 func CreateFixedBlockAllocator(inner Allocator, pageSize , blockSize, alignment uintptr) (*FixedBlockAllocator, error) {
@@ -42,7 +39,7 @@ func CreateFixedBlockAllocator(inner Allocator, pageSize , blockSize, alignment 
 		inner: inner,
 
 		allFreeBlocks: 0,
-		nextOpenPage: 0,
+		nextPageTicket: 0,
 
 		pageSize: pageSize,
 		blockSize: blockSize,
@@ -71,7 +68,8 @@ func (a *FixedBlockAllocator) allocatePage() {
 
 	// Get page bounds & create page
 	pageStart := uintptr(pagePtr)
-	page := &Page{pageStart: pageStart, freeBlocks: make([]unsafe.Pointer, a.blocksPerPage)}
+	page := &Page{index: -1, pageTicket: a.nextPageTicket, pageStart: pageStart, freeBlocks: make([]unsafe.Pointer, a.blocksPerPage)}
+	a.nextPageTicket++
 
 	// Calculate block pointers
 	block := unsafe.Pointer((pageStart+a.alignment) - (pageStart % a.alignment))
@@ -91,24 +89,23 @@ func (a *FixedBlockAllocator) allocatePage() {
 	copy(a.pageStarts[insertIdx+1:],a.pageStarts[insertIdx:])
 	a.pageStarts[insertIdx] = pageStart
 
-	if a.nextOpenPage > insertIdx {
-		a.nextOpenPage = insertIdx
-	}
+	// Add to the PQueue
+	heap.Push(&a.freeBlockQueue, page)
+
 	a.pages[pageStart] = page
 }
 
 func (a *FixedBlockAllocator) deallocatePage(page *Page) {
 	for i := 0; i < len(a.pageStarts); i++ {
 		if a.pageStarts[i] == page.pageStart {
-			if a.nextOpenPage > i {
-				a.nextOpenPage--
-			}
 			a.pageStarts = append(a.pageStarts[:i], a.pageStarts[i+1:]...)
 			break
 		}
 	}
 
 	delete(a.pages, page.pageStart)
+	a.freeBlockQueue.Remove(page)
+
 	a.allFreeBlocks -= a.blocksPerPage
 	a.inner.Free(unsafe.Pointer(page.pageStart))
 }
@@ -122,22 +119,17 @@ func (a *FixedBlockAllocator) Malloc(size uint) unsafe.Pointer {
 		a.allocatePage()
 	}
 
-	var block unsafe.Pointer
-	for i := a.nextOpenPage; i < len(a.pageStarts); i++ {
-		page := a.pages[a.pageStarts[i]]
-		if len(page.freeBlocks) > 0 {
-			block = page.freeBlocks[0]
-			page.freeBlocks = page.freeBlocks[1:]
-
-			break
-		}
-		if i == a.nextOpenPage {
-			a.nextOpenPage++
-		}
+	page := a.freeBlockQueue.Peek()
+	if page == nil || len(page.freeBlocks) == 0 {
+		panic("fixed block allocator: a free block was reported but couldn't be found")
 	}
 
-	if block == nil {
-		panic("fixed block allocator: a free block was reported but couldn't be found")
+	var block unsafe.Pointer
+	freeBlockCount := len(page.freeBlocks)
+	block = page.freeBlocks[freeBlockCount-1]
+	page.freeBlocks = page.freeBlocks[:freeBlockCount-1]
+	if len(page.freeBlocks) == 0 {
+		_ = heap.Pop(&a.freeBlockQueue)
 	}
 
 	a.allFreeBlocks--
@@ -162,6 +154,9 @@ func (a *FixedBlockAllocator) Free(block unsafe.Pointer) {
 
 	// Return the block
 	page.freeBlocks = append(page.freeBlocks, block)
+	if len(page.freeBlocks) == 1 {
+		heap.Push(&a.freeBlockQueue, page)
+	}
 
 	a.allFreeBlocks++
 
@@ -169,8 +164,5 @@ func (a *FixedBlockAllocator) Free(block unsafe.Pointer) {
 	if len(a.pages) > 1 && a.allFreeBlocks >= (3*totalBlocks/4) && len(page.freeBlocks) >= a.blocksPerPage {
 		// We have twice as many blocks as we need & this page is unallocated
 		a.deallocatePage(page)
-	} else if a.nextOpenPage > pageStartIdx {
-		// Malloc our next block from this page
-		a.nextOpenPage = pageStartIdx
 	}
 }

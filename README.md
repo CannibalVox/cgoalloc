@@ -26,15 +26,13 @@ In terms of memory overhead, it's kind of bad! I use a lot of maps and slices to
 
 ```
 BenchmarkDefaultTemporaryData
-BenchmarkDefaultTemporaryData-16    	12289024	        96.00 ns/op
+BenchmarkDefaultTemporaryData-16    	12688918	        96.51 ns/op
 BenchmarkFBATemporaryData
-BenchmarkFBATemporaryData-16        	68277639	        16.44 ns/op
+BenchmarkFBATemporaryData-16        	100000000	        11.07 ns/op
 BenchmarkDefaultGrowShrink
-BenchmarkDefaultGrowShrink-16       	11273998	       105.5 ns/op
+BenchmarkDefaultGrowShrink-16       	11640133	       105.1 ns/op
 BenchmarkFBAGrowShrink
-BenchmarkFBAGrowShrink-16           	36144033	        50.35 ns/op
+BenchmarkFBAGrowShrink-16           	61445820	        34.88 ns/op
 ```
 
-"It's... fine!"
-
-It could be a lot better, really, I got a little lost in the sauce while making the FBA, but this works.
+"It's fine!"
