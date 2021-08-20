@@ -110,8 +110,8 @@ func (a *FixedBlockAllocator) deallocatePage(page *Page) {
 	a.inner.Free(unsafe.Pointer(page.pageStart))
 }
 
-func (a *FixedBlockAllocator) Malloc(size uint) unsafe.Pointer {
-	if size > uint(a.blockSize) {
+func (a *FixedBlockAllocator) Malloc(size int) unsafe.Pointer {
+	if size > int(a.blockSize) {
 		panic("fixed block allocator: requested allocation larger than block size")
 	}
 
