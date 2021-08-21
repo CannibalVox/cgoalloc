@@ -7,9 +7,14 @@ import (
 
 func TestThresholdAlloc(t *testing.T) {
 	test1 := CreateTestAllocator(t, &DefaultAllocator{})
-	test2 := CreateTestAllocator(t, &DefaultAllocator{})
 
-	thresholdAllocator := CreateThresholdAllocator(64, test1, test2)
+	test2FBA, err := CreateFixedBlockAllocator(&DefaultAllocator{}, 64, 64, 8)
+	if err != nil {
+		t.FailNow()
+	}
+	test2 := CreateTestAllocator(t, test2FBA)
+
+	thresholdAllocator := CreateFallbackAllocator(test2, test1)
 	defer thresholdAllocator.Destroy()
 
 	a1 := thresholdAllocator.Malloc(8)

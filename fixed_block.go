@@ -11,7 +11,13 @@ import (
 	"unsafe"
 )
 
-type FixedBlockAllocator struct {
+type FixedBlockAllocator interface {
+	Allocator
+	TryFree(ptr unsafe.Pointer) bool
+	BlockSize() int
+}
+
+type fixedBlockAllocatorImpl struct {
 	inner Allocator
 
 	nextPageTicket uint
@@ -27,7 +33,7 @@ type FixedBlockAllocator struct {
 	freeBlockQueue PagePQueue
 }
 
-func CreateFixedBlockAllocator(inner Allocator, pageSize , blockSize, alignment uintptr) (*FixedBlockAllocator, error) {
+func CreateFixedBlockAllocator(inner Allocator, pageSize , blockSize, alignment uintptr) (FixedBlockAllocator, error) {
 	if blockSize % alignment != 0 {
 		return nil, errors.New("fixed block allocator: blocksize must be a multiple of alignment")
 	}
@@ -35,7 +41,7 @@ func CreateFixedBlockAllocator(inner Allocator, pageSize , blockSize, alignment 
 		return nil, errors.New("fixed block allocator: pagesize must be a multiple of blocksize")
 	}
 
-	return &FixedBlockAllocator{
+	return &fixedBlockAllocatorImpl{
 		inner: inner,
 
 		allFreeBlocks: 0,
@@ -50,7 +56,9 @@ func CreateFixedBlockAllocator(inner Allocator, pageSize , blockSize, alignment 
 	}, nil
 }
 
-func (a *FixedBlockAllocator) Destroy() {
+func (a *fixedBlockAllocatorImpl) BlockSize() int { return int(a.blockSize)}
+
+func (a *fixedBlockAllocatorImpl) Destroy() {
 	blocks := a.blocksPerPage * len(a.pages)
 	if blocks > a.allFreeBlocks {
 		panic("fixedblockallocator: attempted to Destroy, but not all allocations had been freed")
@@ -61,7 +69,7 @@ func (a *FixedBlockAllocator) Destroy() {
 	}
 }
 
-func (a *FixedBlockAllocator) allocatePage() {
+func (a *fixedBlockAllocatorImpl) allocatePage() {
 	// Allocate page memory
 	size := int(a.pageSize+a.alignment)
 	pagePtr := a.inner.Malloc(size)
@@ -95,7 +103,7 @@ func (a *FixedBlockAllocator) allocatePage() {
 	a.pages[pageStart] = page
 }
 
-func (a *FixedBlockAllocator) deallocatePage(page *Page) {
+func (a *fixedBlockAllocatorImpl) deallocatePage(page *Page) {
 	for i := 0; i < len(a.pageStarts); i++ {
 		if a.pageStarts[i] == page.pageStart {
 			a.pageStarts = append(a.pageStarts[:i], a.pageStarts[i+1:]...)
@@ -110,7 +118,7 @@ func (a *FixedBlockAllocator) deallocatePage(page *Page) {
 	a.inner.Free(unsafe.Pointer(page.pageStart))
 }
 
-func (a *FixedBlockAllocator) Malloc(size int) unsafe.Pointer {
+func (a *fixedBlockAllocatorImpl) Malloc(size int) unsafe.Pointer {
 	if size > int(a.blockSize) {
 		panic("fixed block allocator: requested allocation larger than block size")
 	}
@@ -136,19 +144,34 @@ func (a *FixedBlockAllocator) Malloc(size int) unsafe.Pointer {
 	return block
 }
 
-func (a *FixedBlockAllocator) Free(block unsafe.Pointer) {
+func (a *fixedBlockAllocatorImpl) Free(block unsafe.Pointer) {
+	if !a.TryFree(block) {
+		panic("fixed block allocator: attempted to free a block not located in an allocated page")
+	}
+}
+
+func (a *fixedBlockAllocatorImpl) TryFree(block unsafe.Pointer) bool {
+	pageStartsLen := len(a.pageStarts)
+	if pageStartsLen == 0 {
+		return false
+	}
+
 	//Find the page this block belongs to
 	blockPtr := uintptr(block)
-	pageStartIdx := sort.Search(len(a.pageStarts), func(i int) bool {
+	pageStartIdx := sort.Search(pageStartsLen, func(i int) bool {
 		start := a.pageStarts[i]
 		size := a.pageSize+a.alignment
 		end := start+size
 		return end > blockPtr
 	})
 
+	if pageStartIdx >= pageStartsLen {
+		return false
+	}
+
 	pageStart := a.pageStarts[pageStartIdx]
 	if pageStart > blockPtr {
-		panic("fixed block allocator: attempted to free a block not located in an allocated page")
+		return false
 	}
 	page := a.pages[pageStart]
 
@@ -165,4 +188,6 @@ func (a *FixedBlockAllocator) Free(block unsafe.Pointer) {
 		// We have twice as many blocks as we need & this page is unallocated
 		a.deallocatePage(page)
 	}
+
+	return true
 }

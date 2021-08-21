@@ -13,7 +13,7 @@ More importantly, it provides an allocator `FixedBlockAllocator` which sits on t
 Also available:
 
 * `DefaultAllocator` - calls cgo for Malloc and Free
-* `ThresholdAllocator` - If the malloc size is <= a provided value, use one allocator.  Otherwise, use the other.  Allocations made above the threshold size are stored in a map to enable `Free`. You can use this with a `FixedBlockAllocator` to use the default allocator for large requests.  You could also use several to set up a multi-tiered FBA, I suppose. 
+* `FallbackAllocator` - Accepts a FixedBlockAllocator and one other allocator- if the malloc can fit in the FBA, it uses that, otherwise it mallocs in the other allocator. You can use this to fall back on the default allocator for large requests.  You could also use several to set up a multi-tiered FBA, I suppose. 
 * `ArenaAllocator` - sits on top of another allocator.  Exposes a FreeAll method which will free all memory allocated through the ArenaAllocator.  ArenaAllocator is optimized for `FreeAll` and ordinary frees have a cost of O(N)
 
 ### Are these thread-safe?
@@ -38,6 +38,14 @@ BenchmarkFBATemporaryData
 BenchmarkFBATemporaryData-16        	123561244	         9.714 ns/op
 BenchmarkFBAGrowShrink
 BenchmarkFBAGrowShrink-16           	64682006	        34.83 ns/op
+```
+
+3-Layer Fallback
+```
+BenchmarkMultilayerTemporaryData
+BenchmarkMultilayerTemporaryData-16    	72288720	        17.06 ns/op
+BenchmarkMultilayerGrowShrink
+BenchmarkMultilayerGrowShrink-16       	48367983	        35.78 ns/op
 ```
 
 Arena
