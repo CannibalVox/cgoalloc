@@ -15,7 +15,7 @@ func TestThresholdAlloc(t *testing.T) {
 	test2 := CreateTestAllocator(t, test2FBA)
 
 	thresholdAllocator := CreateFallbackAllocator(test2, test1)
-	defer thresholdAllocator.Destroy()
+	defer require.NoError(t, thresholdAllocator.Destroy())
 
 	a1 := thresholdAllocator.Malloc(8)
 	a2 := thresholdAllocator.Malloc(20)

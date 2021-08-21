@@ -1,6 +1,7 @@
 package cgoalloc
 
 import (
+	"errors"
 	"unsafe"
 )
 
@@ -50,9 +51,9 @@ func (a *ArenaAllocator) FreeAll() {
 	a.allocations = nil
 }
 
-func (a *ArenaAllocator) Destroy() {
+func (a *ArenaAllocator) Destroy() error {
 	if len(a.allocations) > 0 {
-		panic("arenaallocator: attempted to Destroy but not all allocations have been freed")
+		return errors.New("arenaallocator: attempted to Destroy but not all allocations have been freed")
 	}
-	a.inner.Destroy()
+	return a.inner.Destroy()
 }

@@ -58,15 +58,17 @@ func CreateFixedBlockAllocator(inner Allocator, pageSize , blockSize, alignment 
 
 func (a *fixedBlockAllocatorImpl) BlockSize() int { return int(a.blockSize)}
 
-func (a *fixedBlockAllocatorImpl) Destroy() {
+func (a *fixedBlockAllocatorImpl) Destroy() error {
 	blocks := a.blocksPerPage * len(a.pages)
 	if blocks > a.allFreeBlocks {
-		panic("fixedblockallocator: attempted to Destroy, but not all allocations had been freed")
+		return errors.New("fixedblockallocator: attempted to Destroy, but not all allocations had been freed")
 	}
 
 	for _, page := range a.pages {
 		a.inner.Free(unsafe.Pointer(page.pageStart))
 	}
+
+	return nil
 }
 
 func (a *fixedBlockAllocatorImpl) allocatePage() {

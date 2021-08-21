@@ -8,7 +8,7 @@ import (
 func TestArena_FreeAll(t *testing.T) {
 	testAlloc := CreateTestAllocator(t, &DefaultAllocator{})
 	alloc := CreateArenaAllocator(testAlloc)
-	defer alloc.Destroy()
+	defer require.NoError(t, alloc.Destroy())
 
 	_ = alloc.Malloc(8)
 	_ = alloc.Malloc(12)
@@ -27,7 +27,7 @@ func TestArena_FreeAll(t *testing.T) {
 func TestArena_PreFreeOne(t *testing.T) {
 	testAlloc := CreateTestAllocator(t, &DefaultAllocator{})
 	alloc := CreateArenaAllocator(testAlloc)
-	defer alloc.Destroy()
+	defer require.NoError(t, alloc.Destroy())
 
 	a1 := alloc.Malloc(8)
 	_ = alloc.Malloc(12)

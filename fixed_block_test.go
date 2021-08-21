@@ -37,7 +37,7 @@ func TestFixedBlock_TenAllocs(t *testing.T) {
 	require.Len(t, frees, 0)
 	require.Equal(t, 168, allocs[0])
 
-	alloc.Destroy()
+	require.NoError(t, alloc.Destroy())
 	allocs, frees = testAlloc.Record()
 	require.Len(t, allocs, 1)
 	require.Len(t, frees, 1)
@@ -48,7 +48,7 @@ func TestFixedBlock_FourPagesUpTwoDown(t *testing.T) {
 	testAlloc := CreateTestAllocator(t, &DefaultAllocator{})
 	alloc, err := CreateFixedBlockAllocator(testAlloc, 16, 8, 8)
 	require.NoError(t, err)
-	defer alloc.Destroy()
+	defer require.NoError(t, alloc.Destroy())
 
 	a1 := alloc.Malloc(2)
 	a2 := alloc.Malloc(2)

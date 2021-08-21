@@ -1,13 +1,14 @@
 package cgoalloc
 
 import (
+	"github.com/stretchr/testify/require"
 	"testing"
 	"unsafe"
 )
 
 func BenchmarkDefaultTemporaryData(b *testing.B) {
 	alloc := &DefaultAllocator{}
-	defer alloc.Destroy()
+	defer require.NoError(b, alloc.Destroy())
 
 	for i := 0; i < b.N; i++ {
 		a := alloc.Malloc(64)
@@ -20,7 +21,7 @@ func BenchmarkFBATemporaryData(b *testing.B) {
 	if err != nil {
 		b.FailNow()
 	}
-	defer alloc.Destroy()
+	defer require.NoError(b, alloc.Destroy())
 
 	for i := 0; i < b.N; i++ {
 		a := alloc.Malloc(64)
@@ -33,7 +34,7 @@ func BenchmarkArenaTemporaryData(b *testing.B) {
 	if err != nil {
 		b.FailNow()
 	}
-	defer alloc.Destroy()
+	defer require.NoError(b, alloc.Destroy())
 
 	for i := 0; i < b.N/2; i++ {
 		arena := CreateArenaAllocator(alloc)
@@ -45,7 +46,7 @@ func BenchmarkArenaTemporaryData(b *testing.B) {
 
 func BenchmarkDefaultGrowShrink(b *testing.B) {
 	alloc := &DefaultAllocator{}
-	defer alloc.Destroy()
+	defer require.NoError(b, alloc.Destroy())
 
 	ptrs := make([]unsafe.Pointer, b.N, b.N)
 
@@ -63,7 +64,7 @@ func BenchmarkFBAGrowShrink(b *testing.B) {
 	if err != nil {
 		b.FailNow()
 	}
-	defer alloc.Destroy()
+	defer require.NoError(b, alloc.Destroy())
 
 	ptrs := make([]unsafe.Pointer, b.N, b.N)
 
@@ -88,7 +89,7 @@ func BenchmarkMultilayerTemporaryData(b *testing.B) {
 	}
 	alloc := CreateFallbackAllocator(higherLevel, defAlloc)
 	alloc = CreateFallbackAllocator(lowerLevel, alloc)
-	defer alloc.Destroy()
+	defer require.NoError(b, alloc.Destroy())
 
 	for i := 0; i < b.N; i++ {
 		size := 4
@@ -114,7 +115,7 @@ func BenchmarkMultilayerGrowShrink(b *testing.B) {
 	}
 	alloc := CreateFallbackAllocator(higherLevel, defAlloc)
 	alloc = CreateFallbackAllocator(lowerLevel, alloc)
-	defer alloc.Destroy()
+	defer require.NoError(b, alloc.Destroy())
 
 	ptrs := make([]unsafe.Pointer, b.N, b.N)
 	for i := 0; i < b.N; i++ {

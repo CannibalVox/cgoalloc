@@ -65,9 +65,9 @@ func (a *TestAlloc) Free(ptr unsafe.Pointer) {
 	a.inner.Free(ptr)
 }
 
-func (a *TestAlloc) Destroy() {
+func (a *TestAlloc) Destroy() error {
 	require.Len(a.t, a.allocSizes, 0)
-	a.inner.Destroy()
+	return a.inner.Destroy()
 }
 
 func (a *TestAlloc) Record() (allocs []int, frees []int) {

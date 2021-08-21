@@ -30,7 +30,8 @@ func (a *FallbackAllocator) Free(ptr unsafe.Pointer) {
 	}
 }
 
-func (a *FallbackAllocator) Destroy() {
-	a.fixedBlock.Destroy()
-	a.fallback.Destroy()
+func (a *FallbackAllocator) Destroy() error {
+	err := a.fixedBlock.Destroy()
+	if err != nil { return err }
+	return a.fallback.Destroy()
 }
