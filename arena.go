@@ -5,6 +5,13 @@ import (
 	"unsafe"
 )
 
+// ArenaAllocator is an Allocator implementation which accepts an Allocator object and passes Malloc and Free calls to
+// the underlying Allocator.  However, it exposes a FreeAll method which will instantly free any Malloc calls which have
+// been proxied through the ArenaAllocator.  Because FreeAll requires all Malloc calls to be tracked in the ArenaAllocator,
+// and because that tracking is optimized for FreeAll speed, direct calls to Free have O(N) time and are not recommended.
+//
+// ArenaAllocator is intended to be spun up temporarily for a flurry of malloc activity that then needs to be undone
+// at the end.
 type ArenaAllocator struct {
 	inner Allocator
 
@@ -44,6 +51,7 @@ func (a *ArenaAllocator) Free(ptr unsafe.Pointer) {
 	a.inner.Free(ptr)
 }
 
+// FreeAll calls Free for every pointer allocated but not freed through this ArenaAllocator
 func (a *ArenaAllocator) FreeAll() {
 	for i := 0; i < len(a.allocations); i++ {
 		a.inner.Free(a.allocations[i])

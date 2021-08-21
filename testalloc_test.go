@@ -43,17 +43,17 @@ func (a *TestAlloc) recordFree(ptr unsafe.Pointer) {
 	a.frees = append(a.frees, size)
 }
 
-func (a *TestAlloc) BlockSize() int {
+func (a *TestAlloc) assignedBlockSize() int {
 	fba, ok := a.inner.(FixedBlockAllocator)
 	require.True(a.t, ok, "testalloc: used testalloc as a fixedbufferallocator but it isn't wrapping a fixedbufferallocator")
-	return fba.BlockSize()
+	return fba.assignedBlockSize()
 }
 
-func (a *TestAlloc) TryFree(ptr unsafe.Pointer) bool {
+func (a *TestAlloc) tryFree(ptr unsafe.Pointer) bool {
 	fba, ok := a.inner.(FixedBlockAllocator)
 	require.True(a.t, ok, "testalloc: used testalloc as a fixedbufferallocator but it isn't wrapping a fixedbufferallocator")
 
-	freed := fba.TryFree(ptr)
+	freed := fba.tryFree(ptr)
 	if freed {
 		a.recordFree(ptr)
 	}
