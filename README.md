@@ -1,5 +1,7 @@
 # CGOAlloc
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/CannibalVox/cgoalloc.svg)](https://pkg.go.dev/github.com/CannibalVox/cgoalloc)
+
 Reducing Malloc/Free traffic to cgo
 
 ### Why?
