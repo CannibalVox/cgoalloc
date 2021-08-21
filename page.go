@@ -18,7 +18,7 @@ type pagePQueue []*page
 func (pq pagePQueue) Len() int {return len(pq)}
 
 func (pq pagePQueue) Less(i, j int) bool {
-	return pq[i].pageTicket > pq[j].pageTicket
+	return pq[i].pageTicket < pq[j].pageTicket
 }
 
 func (pq pagePQueue) Swap(i, j int) {
@@ -41,12 +41,6 @@ func (pq *pagePQueue) Pop() interface{} {
 	*pq = old[0:n-1]
 	item.index = -1
 	return item
-}
-
-func (pq pagePQueue) Peek() *page {
-	if len(pq) == 0 { return nil }
-
-	return pq[len(pq)-1]
 }
 
 func (pq *pagePQueue) Remove(p *page) {

@@ -144,7 +144,7 @@ func (a *fixedBlockAllocatorImpl) Malloc(size int) unsafe.Pointer {
 		a.allocatePage()
 	}
 
-	page := a.freeBlockQueue.Peek()
+	page := a.freeBlockQueue[0]
 	if page == nil || len(page.freeBlocks) == 0 {
 		panic("fixed block allocator: a free block was reported but couldn't be found")
 	}

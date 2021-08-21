@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestFixedBlock_TenAllocs(t *testing.T) {
+func TestFixedBlock_TenAllocs_OnePage(t *testing.T) {
 	testAlloc := CreateTestAllocator(t, &DefaultAllocator{})
 	alloc, err := CreateFixedBlockAllocator(testAlloc, 160, 8, 8)
 	require.NoError(t, err)
@@ -44,6 +44,98 @@ func TestFixedBlock_TenAllocs(t *testing.T) {
 	require.Equal(t, 168, frees[0])
 }
 
+func TestFixedBlock_TenAllocs_ThreePages(t *testing.T) {
+	testAlloc := CreateTestAllocator(t, &DefaultAllocator{})
+	alloc, err := CreateFixedBlockAllocator(testAlloc, 32, 8, 8)
+	require.NoError(t, err)
+
+	a1 := alloc.Malloc(8)
+	a2 := alloc.Malloc(8)
+	a3 := alloc.Malloc(8)
+	a4 := alloc.Malloc(8)
+	a5 := alloc.Malloc(8)
+	a6 := alloc.Malloc(8)
+	a7 := alloc.Malloc(8)
+	a8 := alloc.Malloc(8)
+	a9 := alloc.Malloc(8)
+	a10 := alloc.Malloc(8)
+
+	allocs, frees := testAlloc.Record()
+	require.Len(t, allocs, 3)
+	require.Len(t, frees, 0)
+	require.ElementsMatch(t, allocs, []int{40, 40, 40})
+
+	alloc.Free(a4)
+	alloc.Free(a6)
+	alloc.Free(a3)
+	alloc.Free(a9)
+	alloc.Free(a10)
+	alloc.Free(a2)
+	alloc.Free(a7)
+	alloc.Free(a1)
+	alloc.Free(a5)
+	alloc.Free(a8)
+
+	require.NoError(t, alloc.Destroy())
+	allocs, frees = testAlloc.Record()
+	require.Len(t, allocs, 3)
+	require.Len(t, frees, 3)
+	require.ElementsMatch(t, allocs, []int{40, 40, 40})
+	require.ElementsMatch(t, frees, []int{40, 40, 40})
+}
+
+func TestFixedBlock_TenAllocs_ThreePagesMultipleLive(t *testing.T) {
+	testAlloc := CreateTestAllocator(t, &DefaultAllocator{})
+	alloc, err := CreateFixedBlockAllocator(testAlloc, 32, 8, 8)
+	require.NoError(t, err)
+
+	a1 := alloc.Malloc(8)
+	a2 := alloc.Malloc(8)
+	a3 := alloc.Malloc(8)
+	a4 := alloc.Malloc(8)
+	a5 := alloc.Malloc(8)
+	alloc.Free(a5)
+	alloc.Free(a4)
+
+	a4 = alloc.Malloc(8)
+	a5 = alloc.Malloc(8)
+
+	a6 := alloc.Malloc(8)
+	a7 := alloc.Malloc(8)
+	a8 := alloc.Malloc(8)
+	a9 := alloc.Malloc(8)
+
+	alloc.Free(a9)
+	alloc.Free(a8)
+
+	a8 = alloc.Malloc(8)
+	a9 = alloc.Malloc(8)
+	a10 := alloc.Malloc(8)
+
+	allocs, frees := testAlloc.Record()
+	require.Len(t, allocs, 3)
+	require.Len(t, frees, 0)
+	require.ElementsMatch(t, allocs, []int{40, 40, 40})
+
+	alloc.Free(a4)
+	alloc.Free(a6)
+	alloc.Free(a3)
+	alloc.Free(a9)
+	alloc.Free(a10)
+	alloc.Free(a2)
+	alloc.Free(a7)
+	alloc.Free(a1)
+	alloc.Free(a5)
+	alloc.Free(a8)
+
+	require.NoError(t, alloc.Destroy())
+	allocs, frees = testAlloc.Record()
+	require.Len(t, allocs, 3)
+	require.Len(t, frees, 3)
+	require.ElementsMatch(t, allocs, []int{40, 40, 40})
+	require.ElementsMatch(t, frees, []int{40, 40, 40})
+}
+
 func TestFixedBlock_FourPagesUpTwoDown(t *testing.T) {
 	testAlloc := CreateTestAllocator(t, &DefaultAllocator{})
 	alloc, err := CreateFixedBlockAllocator(testAlloc, 16, 8, 8)
@@ -76,3 +168,4 @@ func TestFixedBlock_FourPagesUpTwoDown(t *testing.T) {
 	alloc.Free(a6)
 	alloc.Free(a7)
 }
+
